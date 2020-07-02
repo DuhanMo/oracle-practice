@@ -215,98 +215,151 @@ AND JOB_NAME = '대리'
 AND LOCAL_NAME LIKE 'ASIA%';
 
 
--- SUBQUERY(서브쿼리)
---    하나의 SQL문 안에 포함된 또다른 SQL문
---    메인쿼리(기존쿼리)를 위해 보조 역할을 하는 쿼리문
-
--- 간단한 서브쿼리 예시 1.
--- 부서코드가 노옹철 사원과 같은 부서의 직원 명단을 조회해보자
-
--- 1) 사원명이 노옹철인 사람의 부서코드 조회
-SELECT 
-    DEPT_CODE
-FROM
-    EMPLOYEE
-WHERE
-   EMP_NAME ='노옹철'; -- > D9인걸 찾음
-
--- 2) 부서코드가 D9인 직원을 조회
-SELECT 
-    EMP_NAME
-FROM
-    EMPLOYEE
-WHERE 
-    DEPT_CODE = 'D9';
-
---> 위의 2개의 단계를 하나의 쿼리로 
-SELECT 
-    EMP_NAME
-FROM
-    EMPLOYEE
-WHERE 
-    DEPT_CODE = (SELECT 
-                     DEPT_CODE
-                 FROM
-                     EMPLOYEE
-                 WHERE
-                     EMP_NAME ='노옹철');
 
 -- JOIN 연습문제
---1. 주민번호가 70년대 생이면서 성별이 여자이고, 
+--1. 주민번호가 70년대 생이면서 성별이 여자이고,
 --   성이 전씨인 직원들의 사원명, 주민번호, 부서명, 직급명을 조회하시오.
-
 --   ANSI 표준
 SELECT
-EMP_NAME
-,   EMP_NO
-,   DEPT_TITLE
-,   JOB_NAME
-FROM EMPLOYEE E
+     EMP_NAME
+  ,  EMP_NO
+  ,  DEPT_TITLE
+  ,  JOB_NAME
+FROM
+     EMPLOYEE E
 JOIN DEPARTMENT ON (DEPT_CODE = DEPT_ID)
-JOIN JOB J ON ( E.JOB_CODE = J.JOB_CODE)
+JOIN JOB J ON (E.JOB_CODE = J.JOB_CODE)
 WHERE SUBSTR(EMP_NO,1,2) >= 70
-AND SUBSTR(EMP_NO,1,2) <80
-AND SUBSTR(EMP_NO,8,1) = 2;
+AND SUBSTR(EMP_NO,1,2) < 80
+AND SUBSTR(EMP_NO,8,1) = 2
+AND EMP_NAME LIKE '전%';
 
 --   오라클 전용
+SELECT EMP_NAME, EMP_NO, DEPT_TITLE, JOB_NAME
+FROM EMPLOYEE E, DEPARTMENT, JOB J
+WHERE DEPT_CODE = DEPT_ID
+AND J.JOB_CODE = E.JOB_CODE
+AND SUBSTR(EMP_NO, 1,2) >= 70
+AND SUBSTR(EMP_NO, 1,2) <80
+AND SUBSTR(EMP_NO, 8,1) = 2
+AND EMP_NAME LIKE '전%';
 
---2. 가장 나이가 적은 직원의 사번, 사원명, 
+--2. 가장 나이가 적은 직원의 사번, 사원명,
 --   나이, 부서명, 직급명을 조회하시오.
 --   ANSI 표준
-SELECT EMP_ID
-     , EMP_NAME
-     , EXTRACT(YEAR FROM SYSDATE)
-     - EXTRACT(YEAR FROM (TO_DATE(SUBSTR(EMP_NO,1,2),'PR'))) + 1 AS 나이
-     , DEPT_TITLE
-     , JOB_NAME
-FROM EMPLOYEE E
-JOIN DEPARTMENT ON ( DEPT_CODE = DEPT_ID)
+SELECT
+     EMP_ID
+ ,   EMP_NAME
+ ,   EXTRACT(YEAR FROM SYSDATE)
+     - EXTRACT(YEAR FROM (TO_DATE(SUBSTR(EMP_NO,1,2),'RR'))) + 1 AS 나이
+ ,   DEPT_TITLE
+ ,   JOB_NAME
+FROM
+     EMPLOYEE E
+JOIN DEPARTMENT ON (DEPT_CODE = DEPT_ID)
 JOIN JOB J ON (E.JOB_CODE = J.JOB_CODE)
-WHERE EXTRACT(YEAR FROM SYSDATE)
-     - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2),'PR'))) + 1
+WHERE
+     EXTRACT(YEAR FROM SYSDATE)
+     - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2),'RR'))) + 1
      = (SELECT MIN(EXTRACT(YEAR FROM SYSDATE)
-                       - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2),'PR')))+1)
-         FROM EMPLOYEE)
-
-
+                   - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2),'RR'))) + 1)
+        FROM EMPLOYEE);
 
 --  오라클전용
+SELECT EMP_ID, EMP_NAME,
+       EXTRACT(YEAR FROM SYSDATE)
+       - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2), 'RR'))) + 1 AS 나이,
+       DEPT_TITLE, JOB_NAME
+FROM EMPLOYEE E, DEPARTMENT, JOB J
+WHERE DEPT_CODE = DEPT_ID
+AND E.JOB_CODE = J.JOB_CODE
+AND EXTRACT(YEAR FROM SYSDATE)
+     - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2), 'RR'))) + 1
+     = (SELECT MIN(EXTRACT(YEAR FROM SYSDATE)
+              - EXTRACT(YEAR FROM(TO_DATE(SUBSTR(EMP_NO,1,2), 'RR'))) + 1)
+        FROM EMPLOYEE);
 
 --3. 이름에 '형'자가 들어가는 직원들의
 --   사번, 사원명, 부서명을 조회하시오.
 --   ANSI 표준
-
+SELECT EMP_ID, EMP_NAME, JOB_NAME
+FROM EMPLOYEE E
+JOIN JOB J ON(E.JOB_CODE = J.JOB_CODE)
+WHERE EMP_NAME LIKE '%형%';
 --   오라클전용
-
---4. 해외영업팀에 근무하는 사원명, 
+SELECT EMP_ID, EMP_NAME, JOB_NAME
+FROM EMPLOYEE E, JOB J
+WHERE E.JOB_CODE = J.JOB_CODE
+AND EMP_NAME LIKE '%형%';
+--4. 해외영업팀에 근무하는 사원명,
 --   직급명, 부서코드, 부서명을 조회하시오.
 --   ANSI표준
-
+SELECT EMP_NAME, JOB_NAME, DEPT_CODE, DEPT_TITLE
+FROM EMPLOYEE E
+JOIN JOB J ON(E.JOB_CODE = J.JOB_CODE)
+JOIN DEPARTMENT ON(DEPT_CODE = DEPT_ID)
+WHERE DEPT_ID IN('D5', 'D6');
 --   오라클전용
-
---5. 보너스포인트를 받는 직원들의 사원명, 
+SELECT EMP_NAME, JOB_NAME, DEPT_CODE, DEPT_TITLE
+FROM EMPLOYEE E, JOB J, DEPARTMENT
+WHERE DEPT_CODE = DEPT_ID
+AND E.JOB_CODE = J.JOB_CODE
+AND DEPT_ID IN('D5', 'D6');
+--5. 보너스포인트를 받는 직원들의 사원명,
 --   보너스포인트, 부서명, 근무지역명을 조회하시오.
 --   ANSI표준
-
+SELECT EMP_NAME, BONUS, DEPT_TITLE, LOCAL_NAME
+FROM EMPLOYEE
+JOIN DEPARTMENT ON(DEPT_CODE = DEPT_ID)
+JOIN LOCATION ON(LOCATION_ID = LOCAL_CODE)
+WHERE BONUS IS NOT NULL;
 
 --   오라클전용
+SELECT EMP_NAME, BONUS, DEPT_TITLE, LOCAL_NAME
+FROM EMPLOYEE, DEPARTMENT, LOCATION
+WHERE DEPT_CODE = DEPT_ID
+AND LOCATION_ID = LOCAL_CODE
+AND BONUS IS NOT NULL;
+
+--6. 부서코드가 D2인 직원들의 사원명, 직급명,부서명, 근무지역명을 조회하시오.
+-- ANSI 표준
+
+-- 오라클 전용
+
+
+--7. 연봉의 최소급여(MIN_SAL)보다 많이 받는 직원들의
+--   사원명, 직급명, 급여, 연봉을 조회하시오.
+--   연봉에 보너스포인트를 적용하시오.
+-- ANSI 표준
+
+-- 오라클 전용
+
+-- 8. 한국(KO)과 일본(JP)에 근무하는 직원들의
+--    사원명, 부서명,지역명, 국가명을 조회하시오
+-- ANSI 표준
+
+-- 오라클 전용
+
+-- 9. 같은 부서에 근무하는 직원들의 사원명, 부서코드, 동료이름을 조회하시오(단 SELF JOIN 사용)
+--   ANSI 표준
+SELECT D.EMP_NAME,
+       E.DEPT_CODE,
+       E.EMP_NAME
+FROM EMPLOYEE E
+        JOIN EMPLOYEE D ON (E.DEPT_CODE = D.DEPT_CODE)
+WHERE E.EMP_NAME != D.DEPT_NAME
+ORDER BY D.EMP_NAME;
+--   오라클 전용
+
+-- 10. 보너스포인트가 없는 직원들 중에서 직급코드가 J4와 J7인 직원들의 사원명, 직급명, 급여를 조회하시오.
+--     단, JOIN과 IN 사용할것
+--   ANSI 표준
+
+
+--  오라클 전용
+
+
+
+
+
+

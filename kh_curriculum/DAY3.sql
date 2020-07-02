@@ -125,11 +125,11 @@ ORDER BY DEPT_CODE;
 -- GROUP BY 절에서만 사용하는 함수
 -- 그룹별로 묶여진 값에 대한 중간 집계와 총 집계를 구할 때 사용한다.
 -- 그룹별로 계산된 결과값들에 대한 총집계가 자동으로 추가된다.
-SELECT JOB_CODE,SUM(SALARY)
-FROM EMPLOYEE
-GROUP BY ROLLUP(JOB_CODE)
-ORDER BY JOB_CODE;
 
+
+SELECT TRUNC(AVG(SALARY)),-4),
+       DEPT_CODE
+FROM EMPLOYEE;
 -- CUBE 함수 : 그룹별 산출한 결과를 집계하는 함수
 SELECT JOB_CODE,SUM(SALARY)
 FROM EMPLOYEE
