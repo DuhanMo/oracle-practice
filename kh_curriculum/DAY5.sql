@@ -18,7 +18,7 @@ FROM EMPLOYEE
 WHERE DEPT_CODE = 'D9';
 
 --> 위의 2개의 단계를 하나의 쿼리로
-SELECT EMP_NAME
+SELECT EMP_NAME, DEPT_CODE
 FROM EMPLOYEE
 WHERE DEPT_CODE = (SELECT DEPT_CODE
                    FROM EMPLOYEE
@@ -53,7 +53,7 @@ WHERE SALARY >= (SELECT AVG(SALARY)
     - 단일행 서브쿼리        : 서브쿼리의 조회 결과 값의 개수가 1개일 때
     - 다중행 서브쿼리        : 서브쿼리의 조회 결과 값의 개수가 여러개일 때
     - 다중열 서브쿼리        : 서브쿼리의 SELECT절에 나열된 항목수가 여러개일때
-    - 다중행 다중열 서브쿼리 : 조회결과 행 수와 열수가 여러개일때
+    - 다중행 다중열 서브쿼리   : 조회결과 행 수와 열수가 여러개일때
     - 상관 서브쿼리          : 서브쿼리가 만들 결과 값을 메인 쿼리가 비교 연산할 때
                                메인 쿼리 테이블의 값이 변경되면 서브쿼리의 결과값도 바뀌는 서브쿼리
     - 스칼라 서브쿼리        : 상관 쿼리이면서 결과값이 하나인 서브쿼리
@@ -231,6 +231,7 @@ WHERE EMP_ID IN (SELECT DISTINCT MANAGER_ID
                  FROM EMPLOYEE
                  WHERE MANAGER_ID IS NOT NULL)
 UNION
+
 SELECT EMP_ID
      , EMP_NAME
      , DEPT_TITLE
@@ -491,7 +492,6 @@ FROM EMPLOYEE E
 WHERE SALARY > (SELECT TRUNC(AVG(SALARY), -5)
                 FROM EMPLOYEE M
                 WHERE E.JOB_CODE = M.JOB_CODE);
-
 
 -- 6. 스칼라 서브쿼리
 --       SELECT절에 사용되는 서브쿼리 결과로 1행만 반환
@@ -793,16 +793,103 @@ CREATE TABLE MEM_UNIQUE2
     EMAIL    VARCHAR2(50)
 );
 
+---------------------------------------------------------------------
+-- * CHECK 제약조건
+--      컬럼에 기록되는 값에 조건 설정을 할 수 있다.
+--      CHECK(컬럼명 비교연산자 비교값)
+--      컬럼레벨, 테이블레벨 둘 다 가능하다.
+--      주의 : 비교값은 리터럴만 사용가능하다 (변하는 값이나 함수, 사용불가능!!)
+
+CREATE TABLE MEM_CHECK(
+    MEM_NO      NUMBER NOT NULL
+  , MEM_ID      VARCHAR2(20) NOT NULL
+  , MEM_PWD     VARCHAR2(30) NOT NULL
+  , MEM_NAME    VARCHAR2(30) NOT NULL
+  , GENDER      VARCHAR2(3)  CHECK(GENDER IN ('남','여')) --> 반드시 이 컬럼의 값으로는 '남' 또는 '여'만 가능하다.
+  , PHONE       VARCHAR2(30)
+  , EMAIL       VARCHAR2(50)
+  , UNIQUE(MEM_ID)
+--  , CHECK(GENDER IN ('남','여'))  -- 테이블 레벨로도 지정 가능하다.
+);
+
+INSERT INTO MEM_CHECK VALUES(2,'USER01','PASS01','홍길동','남','010-1234-5678','HONG123@KH.OR');
+INSERT INTO MEM_CHECK VALUES(1,'USER01','PASS01','홍길동','요','010-1234-5678','HONG123@KH.OR');
+
+SELECT * FROM MEM_CHECK;
 
 
+SELECT UCC.TABLE_NAME, UCC.COLUMN_NAME, UC.CONSTRAINT_TYPE
+FROM USER_CONSTRAINTS UC, USER_CONS_COLUMNS UCC
+WHERE UCC.CONSTRAINT_NAME = UC.CONSTRAINT_NAME
+AND UCC.CONSTRAINT_NAME = 'SYS_C007112';
+
+----------------------------------------------------------------------------------------
+-- PRIMARY KEY(기본키) 제약조건
+--      테이블에서 한 행의 정보를 식별하기 위해 사용할 컬럼
+--      각 행들을 구분할 수 있는 식별자의 역할 EX) 회원번호, 부서코드, 직급코드, 주민번호
+--      PRIMARY KEY 로 제약조건을 하게되면 자동으로 NOT NULL + UNIQUE 제약조건을 의미한다.
+--      한 테이블당 한 개만 설정할 수 있다. (한 컬럼 X)
+--      컬럼레벨, 테이블레벨 방식 둘 다 설정 가능하다.
+
+CREATE TABLE MEM_PRIMARYKEY(
+    MEM_NO      NUMBER CONSTRAINT MEM_PK PRIMARY KEY --> 컬럼 레벨 지정
+  , MEM_ID      VARCHAR2(20) NOT NULL
+  , MEM_PWD     VARCHAR2(30) NOT NULL
+  , MEM_NAME    VARCHAR2(30) NOT NULL
+  , GENDER      VARCHAR2(3)  CHECK(GENDER IN ('남','여')) --> 반드시 이 컬럼의 값으로는 '남' 또는 '여'만 가능하다.
+  , PHONE       VARCHAR2(30)
+  , EMAIL       VARCHAR2(50)
+--  , CONSTRAINT MEM_PK PRIMARY KEY(MEM_NO) -- 테이블 레벨 제약조건 지정
+    --  , CHECK(GENDER IN ('남','여'))  -- 테이블 레벨로도 지정 가능하다.
+);
+INSERT INTO MEM_PRIMARYKEY VALUES(1,'USER01','PSS01','홍길동','남','010-1234-1234','HONG123@KH.OR');
+INSERT INTO MEM_PRIMARYKEY VALUES(1,'USER02','PSS01','홍길동','남','010-1234-1234','HONG123@KH.OR');
+--> 기본키 중복으로 오류
+SELECT * FROM MEM_PRIMARYKEY;
+INSERT INTO MEM_PRIMARYKEY VALUES(NULL,'USER01','PSS01','홍길동','남','010-1234-1234','HONG123@KH.OR');
+--> 기본키가 NULL이므로 오류
+
+CREATE TABLE MEM_PRIMARYKEY2(
+    MEM_NO      NUMBER
+  , MEM_ID      VARCHAR2(20) NOT NULL
+  , MEM_PWD     VARCHAR2(30) NOT NULL
+  , MEM_NAME    VARCHAR2(30) NOT NULL
+  , GENDER      VARCHAR2(3)  CHECK(GENDER IN ('남','여')) --> 반드시 이 컬럼의 값으로는 '남' 또는 '여'만 가능하다.
+  , PHONE       VARCHAR2(30)
+  , EMAIL       VARCHAR2(50)
+  , CONSTRAINT PK_MEM PRIMARY KEY(MEM_NO,MEM_ID) --> 컬럼을 묶어서 기본키 설정 ==> 복합키라고한다.
+    --  , CHECK(GENDER IN ('남','여'))  -- 테이블 레벨로도 지정 가능하다.
+);
+INSERT INTO MEM_PRIMARYKEY2 VALUES(1,'USER01','PSS01','홍길동','남','010-1234-1234','HONG123@KH.OR');
+INSERT INTO MEM_PRIMARYKEY2 VALUES(1,'USER02','PSS02','홍길녀','여','010-1234-1234','HONG123@KH.OR');
+INSERT INTO MEM_PRIMARYKEY2 VALUES(2,'USER01','PSS01','홍길녀','여','010-1234-1234','HONG123@KH.OR');
+
+SELECT * FROM MEM_PRIMARYKEY2;
+INSERT INTO MEM_PRIMARYKEY2 VALUES(1,'USER01','PSS01','신사임당','여','010-1234-1234','HONG123@KH.OR');
+--> 회원번호, 아이디가 세트로 동일한 값이 이미 존재하면 UNIQUE 제약조건에 위배된다. (AND 처럼 둘다 같아야만 안들어가나봄)
+INSERT INTO MEM_PRIMARYKEY2 VALUES(1,NULL,'PSS02','홍길녀','여','010-1234-1234','HONG123@KH.OR');
+--> NULL은 그냥안됨
 
 
+-- * FREIGN ( 외래키) 제약 조건
+-- 참조된 다른 테이블이 제공하는 값만 사용할 수 있다.
+-- FOREIGN KEY제약조건에 의해서 테이블 간의 관계가 형성된다.
+
+-- 우리가 사용하는 데이터베이스가 관계형 데이터베이스라고 해서 테이블간에 관계를 맺어줄 수 있다.
+-- 그 때 쓰이는 테이블간의 연결을 시켜주는 ㅁ연결고리 같은 역할이 외래키이다.
+-- 이 때 부모테이블(참조하는 테이블)의 기본키를 자식 테이블의 외래키로 지정하게 된다.
 
 
+CREATE TABLE MEM_GRADE( -- 회원 등급을 나타내는 테이블(부모테이블)
+    GRADE_CODE      NUMBER PRIMARY KEY
+,   GRADE_NAME      VARCHAR2(30) NOT NULL
 
+);
+INSERT INTO MEM_GRADE VALUES (10,'일반회원');
+INSERT INTO MEM_GRADE VALUES (20,'우수회원');
+INSERT INTO MEM_GRADE VALUES (30,'특별회원');
 
-
-
+SELECT * FROM MEM_GRADE;
 
 
 
