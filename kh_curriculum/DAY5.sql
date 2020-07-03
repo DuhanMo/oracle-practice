@@ -563,46 +563,235 @@ FROM (SELECT DEPT_CODE
 WHERE ROWNUM <= 3;
 
 -- 8. WITH
--- 서브쿼리에 이름을 붙여주고 사용 시 이름을 사용하게 된다
--- 인라인뷰로 사용될 서브쿼리에 주로 사용
--- 이점은 실행 속도도 빨라진다는 장점이 있다
+--      서브쿼리에 이름을 붙여주고 사용 시 이름을 사용하게된다
+--      인라인뷰로 사용될 서브쿼리에 주로 사용한다.
+--      이점은 실행 속도도 빨라진다는 장점이 있다
 
--- 1) 전직원의 급여 순위, 이름, 급여 조회
-WITH TOPN_SAL AS (
-    SELECT EMP_ID,
-           EMP_NAME,
-           SALARY
-    FROM EMPLOYEE
-    ORDER BY SALARY DESC
-)
-SELECT ROWNUM, EMP_NAME,SALARY FROM TOPN_SAL;
+-- 1) 전 직원의 급여 순위, 이름, 급여 조회
+WITH TOPN_SAL AS (SELECT EMP_ID
+                       , EMP_NAME
+                       , SALARY
+                  FROM EMPLOYEE
+                  ORDER BY SALARY DESC)
+
+SELECT ROWNUM, EMP_NAME, SALARY
+FROM TOPN_SAL;
 
 -- 9. RANK() OVER / DENSE_RANK() OVER
+
 -- RANK() OVER : 동일한 순위 이후의 등수를 동일한 인원수만큼 건너뛰고 순위 계산
---               ex) 공동1위가 2명이면 다음 순위는 2위가 아니라 3위이다.
-SELECT EMP_NAME,
-       SALARY,
-       RANK() OVER(ORDER BY SALARY DESC) AS 순위
-FROM EMPLOYEE; --> 공동 19등 후 21등으로 조회
+--               ex) 공동 1위가 2명이면 다음 순위는 2위가 아니라 3위이다.
+SELECT EMP_NAME
+     , SALARY
+     , RANK() OVER (ORDER BY SALARY DESC) AS 순위
+FROM EMPLOYEE;
+-- > 공동 19등 후 21등으로 조회
 
 -- DENSE_RANK() OVER : 동일한 순위 이후의 등수를 이후의 순위로 계산
 --                      ex) 공동 1위가 2명이어도 다음 순위는 2위
-
-SELECT EMP_NAME,
-       SALARY,
-       DENSE_RANK() OVER(ORDER BY SALARY DESC) AS 순위
+SELECT EMP_NAME
+     , SALARY
+     , DENSE_RANK() OVER (ORDER BY SALARY DESC) AS 순위
 FROM EMPLOYEE;
+--> 공동 19등 후 20등으로 조회
+
 
 /*
-    데이터 사전(딕셔너리)란?
-    자원을 효율적으로 관리하기 위한 다양한 정보를 저장하는 시스템 테이블
-    데이터 사전은 사용자가 테이블을 생성하거나 사용자를 변경하는 등의
-    작업을 할 때 데이터베이스 서버에 의해 자동으로 갱신되는 테이블
+   데이터 사전(딕셔너리)란?
+      자원을 효율적으로 관리하기 위한 다양한 정보를 저장하는 시스템 테이블
+      데이터 사전은 사용자가 테이블을 생성하거나 사용자를 변경하는 등의
+      작업을 할 때 데이터베이스 서버에 의해 자동으로 갱신되는 테이블
+
+   USER_TABLES : 자신의 계정이 소유한 객체 등에 관한 정보를 조회 할 수 있는 딕셔너리 뷰
+   USER_TAB_COLUMNS : 테이블,뷰,컬럼과 관련된 정보 조회
+
+   DDL(DATA DEFINITION LANGUAGE) : 데이터 정의 언어
+
+   객체(OBJECT)를 만들고(CREATE), 수정(ALTER)하고, 삭제(DROP) ㄷ으등
+   데이터의 전체 구조를 정의하는 언어로 주로 DB관라자, 설계자가 사용한다.
+
+   오라클에서의 객체 : 테이블(TABLE),뷰(VIEW), 시퀀스(SEQUENCE),
+                       인덱스(INDEX),패키지(PACKAGE),트리거(TRIGGER),프로시져(PROCEDURE),함수(FUNCTION)
+                       동의어(SYSNONYN),사용자(USER)
+
+   CREATE
+   테이블이나 인덱스, 뷰 등 다양한 데이터베이스 객체를 생성하는 구문
+   테이블로 생성된 객체는 DROP구분을 통해서 제거할 수있다.
+
+
+   1. 테이블 만들기
+      테이블이란?  행(ROW)과 열(COLUMN)으로 구성되는 가장 기본적인 데이터베이스 객체
+                  데이터 베이스 내에서 모든 데이터는 테이블을 통해서 저장된다.
+
+     * 표현식
+     CREATE 테이블명(
+         컬럼명    자료형(크기)
+      ,  컬럼명    자료형(크기) ....
+     );
+*/
+CREATE TABLE MEMBER
+(
+    MEMBER_ID   VARCHAR2(20),
+    MEMBER_PWD  VARCHAR2(20),
+    MEMBER_NAME VARCHAR2(20),
+    MEMBER_DATE DATE DEFAULT SYSDATE
+);
+-- DEFAULT 를 통해서 기본값을 지정할 수 있다.
+SELECT *
+FROM MEMBER;
+
+
+-- 컬럼에 주석달기
+-- [표현식]
+-- COMMENT ON COLUMN 테이블명.컬럼명 IS '주석내용';
+
+COMMENT ON COLUMN MEMBER.MEMBER_ID IS '회원아이디';
+COMMENT ON COLUMN MEMBER.MEMBER_PWD IS '비밀번호';
+COMMENT ON COLUMN MEMBER.MEMBER_NAME IS '회원이름';
+COMMENT ON COLUMN MEMBER.MEMBER_DATE IS '회원가입일';
+
+-- USER_TABLES : 사용자가 작성한 테이블을 확인하는 뷰
+SELECT *
+FROM USER_TABLES;
+
+-- DML -- > INSERT구문
+-- INSERT INTO 테이블명 VALUES('값','값'....);
+INSERT INTO MEMBER
+VALUES ('MEM1', '1234ACV', '홍길동', '2020-07-01');
+SELECT *
+FROM MEMBER;
+
+INSERT INTO MEMBER
+VALUES ('MEM2', 'QWER1234', '김영희', SYSDATE);
+INSERT INTO MEMBER
+VALUES ('MEM3', 'Z1231231', '박철수', DEFAULT);
+INSERT INTO MEMBER
+VALUES ('MEM4', 'ADSFSDF', '이순신', SYSDATE);
+
+/*
+   제약조건 - CONSTRAINTS
+      사용자가 원하는 조건의 데이터만 유지하기 위해서 특정 컬럼에 설정하는 제약
+
+      테이블 작성 시 각 컬럼에 대해 값 기록에 대한 제약조건 설정 가능
+      --> 데이터 무결성 보장하기 위해서
+      입력데이터에 문제가 없는지 자동으로 검사하는 목적
+      데이터의 수정/삭제 가능 여부 검사등을 목적으로한다.
+
+      PRIMARY KEY, NOT NULL, UNIQUE, CHECK, FOREIGN KEY
 */
 
+-- 제약조건확인
+-- USER_CONSTRAINTS : 사용자가 작성한 제약조건을 확인하는 뷰테이블
+SELECT *
+FROM USER_CONSTRAINTS;
+DESC USER_CONSTRAINTS;
 
+-- USER_CONS_COLUMNS : 제약조건이 걸려있는 컬럼을 확인하는 뷰 테이블
+SELECT *
+FROM USER_CONS_COLUMNS;
 
+-- * NOT NULL 제약조건
+--     해당 컬럼에 반드시 값이 기록되어야 하는 경우 사용
+--     삽입/수정 시 NULL값을 허용하지 않도록 컬럼레벨에서 제한
 
+-- NOT NULL 제약 조건설정을 딱히 안한 일반 테이블을 만들자
+DROP TABLE MEM_NOCONST;
+CREATE TABLE MEM_NOCONST
+(
+    MEM_NO   NUMBER,
+    MEM_ID   VARCHAR2(20),
+    MEM_PWD  VARCHAR2(30),
+    MEM_NAME VARCHAR2(30),
+    GENDER   VARCHAR2(3),
+    PHONE    VARCHAR2(30),
+    EMAIL    VARCHAR2(50)
+);
+
+INSERT INTO MEM_NOCONST
+VALUES (1, 'user01', 'pass01', '홍길동', '남', '010-1234-5678', 'hong123@kh.or');
+INSERT INTO MEM_NOCONST
+VALUES (2, NULL, NULL, NULL, NULL, '010-1234-5678', 'hong123@kh.or');
+-- > 값에 NULL이 있어도 삽입 성공
+SELECT *
+FROM MEM_NOCONST;
+
+-- NOT NULL 제약조건설정을 한 테이블 만들기
+
+--   >> 테이블 생성 시 제약조건을 설정하는 방식은 두가지가 존재한다. (컬럼레벨,테이블레벨)
+--  ******* NOT NULL 제약조건은 컬럼레벨 방식밖에 안된다.
+--  컬럼레벨 방식 : 단순히 컬럼을 기입하는데 뒤에 제약조건을 붙이는 방식
+--  [표현식] : 컬럼명   자료형(크기) 제약조건
+
+CREATE TABLE MEM_NOTNULL
+(
+    MEM_NO   NUMBER       NOT NULL,
+    MEM_ID   VARCHAR2(20) NOT NULL,
+    MEM_PWD  VARCHAR2(30) NOT NULL,
+    MEM_NAME VARCHAR2(30) NOT NULL,
+    GENDER   VARCHAR2(3),
+    PHONE    VARCHAR2(30),
+    EMAIL    VARCHAR2(50)
+);
+
+INSERT INTO MEM_NOTNULL
+VALUES (1, 'user01', 'pass01', '홍길동', '남', '010-1234-5678', 'hong123@kh.or');
+INSERT INTO MEM_NOTNULL
+VALUES (2, NULL, NULL, NULL, NULL, '010-1234-5678', 'hong123@kh.or');
+--> NOT NULL 제약조건에 위배되어 오류 발생
+--> NOT NULL 제약조건이 걸려있는 컬럼에는 값이 반드시 있어야 된다.
+/*
+[오류발생]
+INSERT INTO MEM_NOTNULL VALUES(2,NULL,NULL,NULL,NULL,'010-1234-5678','hong123@kh.or')
+오류 보고 -
+ORA-01400: cannot insert NULL into ("EMPLOYEE"."MEM_NOTNULL"."MEM_ID")
+*/
+SELECT *
+FROM MEM_NOTNULL;
+--------------------------------------------------------------------------------------------------------------------
+-- * UNIQUE 제약조건
+--     컬럼에 입력 값에 대해서 중복을 제한하는 제약조건
+--     기존에 있는 데이터 중에 중복이 있으면 안된다.
+--     (제약조건 지정방식 : 컬럼레벨, 테이블레벨 방식)
+
+INSERT INTO MEM_NOTNULL
+VALUES (2, 'user01', 'pass01', '홍길동', '남', '010-1234-5678', 'hong123@kh.or');
+
+CREATE TABLE MEM_UNIQUE
+(
+    MEM_NO   NUMBER       NOT NULL,
+    MEM_ID   VARCHAR2(20) NOT NULL UNIQUE -->컬럼레벨 지정, 여러개의 제약조건도 지정이 가능하다.
+    ,
+    MEM_PWD  VARCHAR2(30) NOT NULL,
+    MEM_NAME VARCHAR2(30) NOT NULL,
+    GENDER   VARCHAR2(3),
+    PHONE    VARCHAR2(30),
+    EMAIL    VARCHAR2(50)
+);
+
+INSERT INTO MEM_UNIQUE
+VALUES (2, 'user01', 'pass01', '홍길동', '남', '010-1234-5678', 'hong123@kh.or');
+-- 같은 아이디인 데이터가 이미 테이블에 있으므로 UNIQUE제약조건에 위배된다.
+SELECT *
+FROM MEM_UNIQUE;
+
+-- 오류 보고에 나타나는 SYS_C00XXXX 같은 제약 조건명으로
+-- 해당 제약 조건이 설정된 테이블명, 컬럼, 제약 조건 타입 조회
+SELECT UCC.TABLE_NAME, UCC.COLUMN_NAME, UC.CONSTRAINT_TYPE
+FROM USER_CONSTRAINTS UC,
+     USER_CONS_COLUMNS UCC
+WHERE UCC.CONSTRAINT_NAME = UC.CONSTRAINT_NAME
+  AND UCC.CONSTRAINT_NAME = 'SYS_C007059';
+
+CREATE TABLE MEM_UNIQUE2
+(
+    MEM_NO   NUMBER       NOT NULL,
+    MEM_ID   VARCHAR2(20) NOT NULL,
+    MEM_PWD  VARCHAR2(30) NOT NULL,
+    MEM_NAME VARCHAR2(30) NOT NULL,
+    GENDER   VARCHAR2(3),
+    PHONE    VARCHAR2(30),
+    EMAIL    VARCHAR2(50)
+);
 
 
 
