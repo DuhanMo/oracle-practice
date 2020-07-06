@@ -554,6 +554,11 @@ FROM (SELECT *
       ORDER BY SALARY DESC)
 WHERE ROWNUM <= 5;
 
+SELECT ROWNUM
+FROM EMPLOYEE
+WHERE ROWNUM <=5
+ORDER BY HIRE_DATE;
+
 -- 2) 급여 평균 3위 안에 드는 부서의 부서코드와 부서명, 평균급여를 조회하세요.
 
 SELECT *

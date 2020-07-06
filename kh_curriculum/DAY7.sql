@@ -90,3 +90,15 @@ AS SELECT EMP_ID, EMP_NAME, HIRE_DATE, SALARY
    WHERE 1 = 0;
 
 commit;
+
+CREATE TABLE memberTb
+(
+    id VARCHAR2(10) ,
+    pass VARCHAR2(20) ,
+    name VARCHAR2(10) ,
+    age INTEGER
+);
+INSERT INTO memberTb(id, pass, name, age) VALUES('0100','1234','이지은',25);
+INSERT INTO memberTb(id, pass, name, age) VALUES('0101','C33kimleechoi','강한나',30);
+INSERT INTO memberTb(id, pass, name, age) VALUES('0102','snsd','서주현',28);
+SELECT * FROM memberTb;
