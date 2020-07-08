@@ -1,49 +1,340 @@
+-- DAY8 수업내용
+-- 데이터 딕셔너리
+-- 자원을 효율적으로 관리하기 위해 다양한 정보를 저장하는 시스템 테이블
+
+-- 3개 딕셔너리 뷰로 나눠진다.
+-- 1. DBA_XXX : 데이터베이스 관리자만 접근이 가능한 객체등의 정보조회
+-- 2. ALL_XXX : 자신의 계정 + 권한을 부여받은 객체의 정보 조회
+-- 3. USER_XXX: 자신의 계정이 소유한 객체 등에 관한 정보 조회
+
+-- 현재 내가 가진 권한 확인
 SELECT * FROM USER_SYS_PRIVS;
 
 SELECT * FROM USER_ROLE_PRIVS;
 
 SELECT * FROM USER_VIEWS;
-
-GRANT CREATE VIEW TO EMPLOYEE;
-
+-- GRANT CREATE VIEW TO EMPLOYEE; 권한부여를 하기위해서는 관리자계정으로 권한을 부여받아야한다.
 CREATE OR REPLACE VIEW V_EMP(사번,이름,부서)
 AS SELECT EMP_ID,EMP_NAME,DEPT_CODE
-FROM EMPLOYEE;
+   FROM EMPLOYEE;
 
 SELECT * FROM V_EMP;
 
--- view (뷰)
+-- VIEW(뷰)
 -- SELECT 쿼리문을 저장한 객체이다.
--- 실징적인 데이터를 저장하고 있지 않는다.(단순히 쿼리가 저장되어있다고 생각)
+-- 실질적인 데이터를 저장하고 있지 않는다.(단순히 쿼리가 저장되어있다고 생각)
 -- 테이블을 사용하는 것과 동일하게 사용할 수 있다.
 -- [표현식]
--- CREATE VIEW 뷰 이름 AS 서브쿼리 --> 기본구조
--- CREATE [OR REPLACE ] VIEW 뷰 이름 AS 서브쿼리
+-- CREATE VIEW 뷰이름 AS 서브쿼리 --> 기본구조
+-- CREATE [OR REPLACE] VIEW 뷰이름 AS 서브쿼리
 
--->> [OR REPLACE] : 뷰 생성 시 기존에 같은 이름의 뷰가 있다면 해당 뷰를 변경한다.
---      --> OR REPLACE 를 사용하지 않고 같은 이름의 뷰 생성시 이미 다른 객체가 사용중인 이름이라고 에러 발생
+-- >> [OR REPLACE] : 뷰 생성 시 기존에 같은 이름의 뷰가 있다면 해당 뷰를 변경한다.
+--      --> OR REPLACE를 사용하지 않고 같은 이름의 뷰 생성시 이미 다른 객체가 사용중인 이름이라고 에러발생
 
--- 사번, 이름, 직급명, 부서명, 근무지역을 조회하고
+-- 사번,이름,직급명,부서명,근무지역을 조회하고
 -- 그 결과를 V_RESULT_EMP라는 뷰를 생성해서 저장하세요.
-CREATE  OR REPLACE VIEW V_RESULT_EMP
-AS SELECT EMP_ID,
-          EMP_NAME,
-          JOB_NAME,
-          DEPT_TITLE,
-          LOCAL_NAME
-FROM EMPLOYEE -- 베이스 테이블
-LEFT JOIN JOB USING (JOB_CODE)
-LEFT JOIN DEPARTMENT ON (DEPT_ID = DEPT_CODE)
-LEFT JOIN LOCATION L ON (LOCATION_ID = LOCAL_CODE);
-
+CREATE OR REPLACE VIEW V_RESULT_EMP
+AS SELECT EMP_ID,EMP_NAME,JOB_NAME,DEPT_TITLE,LOCAL_NAME
+   FROM EMPLOYEE E --베이스테이블
+   LEFT JOIN JOB USING(JOB_CODE)
+   LEFT JOIN DEPARTMENT D ON (DEPT_CODE = DEPT_ID)
+   LEFT JOIN LOCATION L ON (LOCATION_ID=LOCAL_CODE);
+   
 SELECT * FROM V_RESULT_EMP;
 
+-- 베이스 테이블의 정보가 변경되면 VIEW도 같이 변경된다.
 
+SELECT * FROM EMPLOYEE
+WHERE EMP_NAME = '정중하';
+COMMIT;
+
+UPDATE EMPLOYEE
+SET EMP_NAME='정중앙'
+WHERE EMP_ID = '205';
+
+SELECT * FROM V_RESULT_EMP WHERE EMP_ID=205;
+
+DROP VIEW V_RESULT_EMP; -- DROP , CREATE , ALTER --> DDL --> 테이블구조변경 --> COMMIT하지않아도 AUTO COMMIT
+
+ROLLBACK;
+
+-- 뷰의 컬럼에 별칭을 부여할 수있다.
 CREATE OR REPLACE VIEW V_EMPLOYEE(사번,이름,부서,지역)
 AS SELECT EMP_ID,EMP_NAME,DEPT_TITLE,NATIONAL_NAME
    FROM EMPLOYEE
    LEFT JOIN DEPARTMENT ON (DEPT_CODE = DEPT_ID)
    LEFT JOIN LOCATION ON (LOCATION_ID=LOCAL_CODE)
    LEFT JOIN NATIONAL USING(NATIONAL_CODE);
-
+   
 SELECT * FROM V_EMPLOYEE;
+
+-- 뷰 서브쿼리 안에 연산의 결과도 포함할 수 있다.
+CREATE OR REPLACE VIEW V_EMP_JOB(사번,이름,직급,성별,근무년수)
+AS SELECT EMP_ID,EMP_NAME,JOB_NAME,
+         DECODE(SUBSTR(EMP_NO,8,1),1,'남','여'),
+         EXTRACT(YEAR FROM SYSDATE)
+          - EXTRACT(YEAR FROM HIRE_DATE)
+   FROM EMPLOYEE
+   JOIN JOB USING(JOB_CODE);
+         
+SELECT * FROM V_EMP_JOB;
+
+SELECT * FROM JOB;
+
+CREATE OR REPLACE VIEW V_JOB
+AS SELECT JOB_CODE,JOB_NAME
+   FROM JOB;
+   
+SELECT * FROM V_JOB;
+
+INSERT INTO V_JOB VALUES('J8','인턴');
+
+UPDATE V_JOB
+SET JOB_NAME='알바'
+WHERE JOB_CODE='J8';
+
+DELETE FROM V_JOB
+WHERE JOB_CODE='J8';
+
+/*
+   2. DML명령어로 조작이 불가능한 경우
+   1) 뷰 정의에 포함되지 않은 컬럼을 조작하는경우
+   2) 뷰에 포함되지 않은 컬럼 중에 
+      베이스가 되는 테이블 컬럼이 NOT NULL제약조건이 지정된 경우 --> INSERT시에 오류발생
+    3) 산술표현식으로 정의된 경우
+    4) 그룹함수나 GROUP BY절을 포함한 경우
+    5) DISTINCT를 포함한 경우
+    6) JOIN을 이용해 여러 테이블을 연결한 경우
+*/
+-- 1) 뷰 정의에 포함되지 않은 컬럼을 조작하는 경우
+CREATE OR REPLACE VIEW V_JOB2
+AS SELECT JOB_CODE
+   FROM JOB;
+
+SELECT * FROM V_JOB2;
+
+-- 뷰에 정의되지 않은 컬럼(JOB_NAME)을 조작하려고 해서 에러가 발생경우
+INSERT INTO V_JOB2 VALUES('J8','인턴');
+
+UPDATE V_JOB2
+SET JOB_NAME = '인턴'
+WHERE JOB_CODE='J7';
+
+DELETE FROM V_JOB2
+WHERE JOB_NAME='사원';
+
+-- 2) 뷰에 포함되지 않은 컬럼 중에, 베이스가 되는 컬럼이 NOT NULL제약조건이 지정된 경우
+CREATE OR REPLACE VIEW V_JOB3
+AS SELECT JOB_NAME,JOB_CODE
+   FROM JOB;
+   
+SELECT * FROM USER_VIEWS;   
+   
+SELECT * FROM V_JOB3;
+
+INSERT INTO V_JOB3 VALUES('J8','인턴');
+-- 뷰에 정의되지않은 컬럼 조작 --> 에러
+
+INSERT INTO V_JOB3 VALUES('인턴');
+-- 베이스테이블인 JOB에 JOB_CODE는 NOT NULL제약조건이 지정되어있다. --> 에러
+
+-- UPDATE/DELETE는 문제없이 가능
+UPDATE V_JOB3
+SET JOB_NAME='알바'
+WHERE JOB_NAME='사원';
+
+SELECT * FROM V_JOB3;
+SELECT * FROM JOB;
+
+DELETE FROM V_JOB3
+WHERE JOB_NAME='알바';
+
+-- 3) 산술표현식으로 정의된 경우
+CREATE OR REPLACE VIEW EMP_SAL --> 회원의 연봉정보를 조회하는뷰
+AS SELECT EMP_ID,EMP_NAME,SALARY
+          ,(SALARY + (SALARY*NVL(BONUS,0)))*12 연봉 --별칭 반드시 써야한다.
+    FROM EMPLOYEE;
+
+SELECT * FROM EMP_SAL;
+
+-- 뷰에 산술 계산식이 포함된 경우 INSERT/UPDATE 시 에러발생
+INSERT INTO EMP_SAL VALUES(800,'정진훈',3000000,3600000);
+
+UPDATE EMP_SAL
+SET 연봉 = 8000000
+WHERE EMP_ID=200;
+
+-- DELETE할떄는 사용 가능
+DELETE FROM EMP_SAL
+WHERE 연봉 = 124800000;
+
+ROLLBACK;
+
+-- 4) 그룹함수 또는 GROUP BY 절을 포함하는 경우
+CREATE OR REPLACE VIEW V_GROUPDEPT --> 부서별 급여합계, 급여평균을 조회하는 뷰
+AS SELECT DEPT_CODE,SUM(SALARY) 합계, AVG(SALARY) 평균
+   FROM EMPLOYEE
+   GROUP BY DEPT_CODE;
+   
+SELECT * FROM V_GROUPDEPT;
+
+-- 그룹함수 또는 GROUP BY를 사용한 경우 INSERT/UPDATE/DELETE 시 에러 발생
+-- INSERT --> 에러
+INSERT INTO V_GROUPDEPT VALUES('D0',6000000,40000000);
+
+-- UPDATE --에러
+UPDATE V_GROUPDEPT
+SET DEPT_CODE = 'D0'
+WHERE DEPT_CODE = 'D1';
+
+-- DELETE 
+DELETE FROM V_GROUPDEPT
+WHERE DEPT_CODE = 'D1';
+
+-- 5) DISTINCT를 포함한 경우
+CREATE OR REPLACE VIEW V_DT_EMP
+AS SELECT DISTINCT JOB_CODE
+   FROM EMPLOYEE;
+
+SELECT * FROM V_DT_EMP;
+
+-- DISTINCT를 사용한 경우 INSERT/UPDATE/DELETE 시 에러 발생
+INSERT INTO V_DT_EMP VALUES('J9');
+
+UPDATE V_DT_EMP
+SET JOB_CODE='J9'
+WHERE JOB_CODE='J7';
+
+DELETE FROM V_DT_EMP WHERE JOB_CODE='J1';
+
+-- 6) JOIN을 이용해 여러 테이블을 연결한 경우
+CREATE OR REPLACE VIEW V_JOINEMP
+AS SELECT EMP_ID,EMP_NAME,DEPT_TITLE
+   FROM EMPLOYEE
+   JOIN DEPARTMENT ON (DEPT_CODE=DEPT_ID);
+
+SELECT * FROM V_JOINEMP;
+
+-- 뷰 정의시 JOIN을 사용한 경우 INSERT/UPDATE시 에러발생
+INSERT INTO V_JOINEMP VALUES(888,'조세오','인사관리부');
+
+UPDATE V_JOINEMP
+SET DEPT_TITLE='인사관리부'
+WHERE EMP_ID=219;
+
+-- 단 DELETE는 가능
+DELETE FROM V_JOINEMP
+WHERE EMP_ID=219;
+
+SELECT * FROM V_JOINEMP WHERE EMP_ID=219;
+SELECT * FROM EMPLOYEE WHERE EMP_ID=219;
+SELECT * FROM DEPARTMENT;
+
+DELETE FROM V_JOINEMP
+WHERE DEPT_TITLE='총무부';
+-- 뷰 생성 시 작성했던 서브쿼리의 FROM절 구문의 테이블에만 영향을 끼친다.
+
+
+SELECT * FROM V_JOINEMP;
+SELECT * FROM EMPLOYEE;
+SELECT * FROM DEPARTMENT;
+
+ROLLBACK;
+
+/*
+   4.VIEW 옵션
+   
+   [표현식]  --> 상세
+   CREATE [OR REPLACE] [FORCE | NOFORCE] VIEW 뷰이름[(alias,[,alias]....)]
+   AS SUBQUERY
+   [WITH CHECK OPTION]
+   [WITH READ ONLY]
+   
+   1) OR REPLACE 옵션 : 기존에 동일한 뷰 이름이 존재하는 경우 덮어쓰고, 존재하지 않으면 새로 생성
+   2) FORCE/ NOFORCE옵션
+      FORCE : 서브쿼리에 사용된 테이블이 존재하지 않아도 뷰 생성
+      NOFORCE: 서브쿼리에 사용된 테이블이 존재해야만 뷰 생성(기본값)
+   3) WITH CHECK OPTION 옵션 : 조건절에 작성된 조건에 부합하지 않는 값으로 수정하는 경우 오류발생
+   4) WITH READ ONLY 옵션 : 뷰에 대해 조회만 가능(DML수행 불가)
+*/
+-- 1) OR REPLACE 옵션 : 기존에 동일한 뷰 이름이 존재하는 경우 덮어쓰고, 존재하지 않으면 새로 생성
+CREATE OR REPLACE VIEW V_EMP2
+AS SELECT EMP_NO,EMP_NAME
+   FROM EMPLOYEE;
+   
+SELECT * FROM V_EMP2;
+
+-- OR REPLACE 옵션 사용 시 덮어쓰기 된다.
+CREATE OR REPLACE VIEW V_EMP2
+AS SELECT EMP_NO,EMP_NAME,SALARY
+   FROM EMPLOYEE;
+
+SELECT * FROM V_EMP2;
+
+-- OR REPLACE옵션 제거 시 덮어쓰기 되지 않는다.
+CREATE VIEW V_EMP2
+AS SELECT EMP_NO,EMP_NAME
+   FROM EMPLOYEE;
+
+-- 2) FORCE /NOFORCE 옵션
+-- FORCE : 서브쿼리에 사용된 테이블이 존재하지 않아도 뷰 생성
+CREATE OR REPLACE FORCE VIEW V_EMP
+AS SELECT TCODE,TNAME,TCONTENT
+   FROM TT;
+
+-- 경고 메세지가 뜨지만 뷰 생성에는 성공함
+
+SELECT * FROM USER_VIEWS;
+
+SELECT * FROM V_EMP; --> 하지만 조회 시 문제 발생
+
+CREATE TABLE TT(
+   TCODE NUMBER
+ , TNAME VARCHAR2(10)
+ , TCONTENT VARCHAR2(20)
+);
+
+SELECT * FROM V_EMP; --> TT테이블 만들어지면 조회가능
+
+DROP TABLE TT;
+
+-- NOFORCE : 서브쿼리에 사용된 테이블이 존재해야만 뷰 생성(기본값)
+CREATE OR REPLACE /*NOFORCE*/ VIEW V_EMP2
+AS SELECT TCODE,TNAME,TCONTENT
+   FROM TT;
+
+-- 3) WITH CHECK OPTION 옵션 : 조건절에 작성된 조건에 부합하지 않는 값으로 수정하는 경우 오류 발생
+CREATE OR REPLACE VIEW V_EMP3
+AS SELECT *
+   FROM EMPLOYEE
+   WHERE SALARY >=3000000
+WITH CHECK OPTION;
+
+SELECT * FROM V_EMP3;
+
+UPDATE V_EMP3
+SET SALARY = 2000000 -->해당 조건에 일치하지 않게끔 작업을 하게 되면 오류 발생
+WHERE EMP_ID =200;
+
+-- DELETE는 가능하다
+DELETE FROM V_EMP3;
+
+ROLLBACK;
+
+-- 4) WITH READ ONLY 옵션 : 뷰에 대해 조회만 가능(DML 수행 불가)
+CREATE OR REPLACE VIEW V_DEPT
+AS SELECT * FROM DEPARTMENT
+WITH READ ONLY;
+
+SELECT * FROM V_DEPT;
+
+DELETE FROM V_DEPT;
+
+
+
+
+
+
+
+
+
