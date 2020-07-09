@@ -107,6 +107,7 @@ WHERE JOB_CODE='J8';
     6) JOIN을 이용해 여러 테이블을 연결한 경우
 */
 -- 1) 뷰 정의에 포함되지 않은 컬럼을 조작하는 경우
+
 CREATE OR REPLACE VIEW V_JOB2
 AS SELECT JOB_CODE
    FROM JOB;
@@ -124,6 +125,7 @@ DELETE FROM V_JOB2
 WHERE JOB_NAME='사원';
 
 -- 2) 뷰에 포함되지 않은 컬럼 중에, 베이스가 되는 컬럼이 NOT NULL제약조건이 지정된 경우
+
 CREATE OR REPLACE VIEW V_JOB3
 AS SELECT JOB_NAME,JOB_CODE
    FROM JOB;
